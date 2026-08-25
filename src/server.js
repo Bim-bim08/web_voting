@@ -29,12 +29,16 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // CORS Middleware untuk API Routes
 // ============================================
 function apiCors(req, res, next) {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    return res.status(200).end();
   }
   next();
 }
@@ -65,9 +69,82 @@ app.get('/api', (req, res) => {
       validateToken: 'POST /api/tokens/validate',
       paslon: 'GET /api/paslon',
       candidates: 'GET /api/candidates',
+      voters: 'GET /api/voters',
+      stats: 'GET /api/stats',
       vote: 'POST /api/vote'
     }
   });
+});
+
+/**
+ * GET /api/stats
+ * Statistik jumlah pemilih, sudah memilih, dan belum memilih
+ */
+app.get('/api/stats', async (req, res) => {
+  try {
+    const [totalRows] = await pool.execute(
+      'SELECT COUNT(*) AS total FROM voters'
+    );
+    const total = totalRows[0].total;
+
+    const [votedRows] = await pool.execute(
+      'SELECT COUNT(*) AS voted_count FROM voters WHERE is_voted = 1'
+    );
+    const voted_count = votedRows[0].voted_count;
+
+    const unvoted_count = total - voted_count;
+    const participation_rate = total > 0
+      ? parseFloat(((voted_count / total) * 100).toFixed(2))
+      : 0;
+
+    return res.status(200).json({
+      total_dpt: total,
+      voted: voted_count,
+      unvoted: unvoted_count,
+      participation_rate: participation_rate
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/voters
+ * Ambil daftar semua pemilih beserta status voting
+ */
+app.get('/api/voters', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, identifier, full_name, role, token_code,
+              is_voted, voted_at, created_at
+       FROM voters
+       ORDER BY identifier ASC`
+    );
+
+    const voters = rows.map((r) => ({
+      id: r.id,
+      identifier: r.identifier,
+      full_name: r.full_name,
+      role: r.role,
+      token_code: r.token_code,
+      is_voted: r.is_voted === 1,
+      voted_at: r.voted_at,
+      created_at: r.created_at
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: voters
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 /**
