@@ -116,7 +116,7 @@ app.get('/api/paslon', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, votes
+              vision, mission
       FROM candidates
       ORDER BY candidate_number ASC`
     );
@@ -148,7 +148,7 @@ app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, votes
+              vision, mission
       FROM candidates
       ORDER BY candidate_number ASC`
     );
