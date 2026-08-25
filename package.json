@@ -1,0 +1,27 @@
+{
+  "name": "e-election-osis",
+  "version": "1.0.0",
+  "description": "Platform Voting E-Election OSIS Sekolah",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js",
+    "seed:mysql": "node src/seed-mysql.js"
+  },
+  "keywords": [
+    "e-election",
+    "osis",
+    "voting",
+    "school"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.23.4"
+  }
+}

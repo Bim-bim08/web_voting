@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Election OSIS — Pemilihan Ketua OSIS</title>
+  <meta name="description" content="Platform Voting E-Election OSIS Sekolah">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗳️</text></svg>">
+</head>
+<body>
+
+  <!-- ============================================
+       Header
+       ============================================ -->
+  <header class="header">
+    <div class="container">
+      <a href="#" class="logo" onclick="goToTokenPage(); return false;">
+        <div class="logo-icon">🗳️</div>
+        <span class="logo-text">E-Election OSIS</span>
+      </a>
+      <span class="header-badge" id="headerBadge">Verifikasi Pemilih</span>
+    </div>
+  </header>
+
+  <!-- ============================================
+       Page 1: Token Input
+       ============================================ -->
+  <div id="tokenPage" class="page token-page active">
+    <div class="token-card">
+      <div class="token-header">
+        <div class="token-icon">🔑</div>
+        <h1 class="token-title">Verifikasi Pemilih</h1>
+        <p class="token-subtitle">Masukkan NISN atau ID Guru Anda untuk memulai pemilihan.</p>
+      </div>
+
+      <form id="tokenForm" class="token-form" onsubmit="handleTokenSubmit(event)">
+        <div class="form-group">
+          <label class="form-label" for="tokenInput">NISN / ID Pemilih</label>
+          <input
+            type="text"
+            id="tokenInput"
+            class="form-input"
+            placeholder="Masukkan NISN atau ID Guru"
+            maxlength="50"
+            autocomplete="off"
+            spellcheck="false"
+            required
+          >
+        </div>
+
+        <button type="submit" id="tokenSubmitBtn" class="btn btn-primary">
+          <span id="tokenBtnText">Verifikasi</span>
+          <span id="tokenBtnSpinner" class="spinner" style="display: none;"></span>
+        </button>
+      </form>
+
+      <p style="text-align: center; margin-top: 1.5rem; font-size: 0.8125rem; color: var(--text-muted);">
+        Hak pilih hanya dapat digunakan sekali.
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================================
+       Page 2: Bilik Suara (Voting Booth)
+       ============================================ -->
+  <div id="boothPage" class="page booth-page">
+    <div class="booth-header">
+      <div class="container">
+        <h1 class="booth-title">Bilik Suara</h1>
+        <p class="booth-subtitle" id="voterGreeting">Pilih pasangan calon ketua dan wakil ketua OSIS pilihan Anda.</p>
+      </div>
+    </div>
+
+    <div class="container">
+      <div id="candidatesGrid" class="booth-grid">
+        <!-- Candidates will be loaded here -->
+      </div>
+
+      <div style="text-align: center; padding: 1rem;">
+        <button class="btn btn-secondary" onclick="handleLogout()">
+          ← Keluar & Gunakan Token Lain
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       Modal: Konfirmasi Voting
+       ============================================ -->
+  <div id="confirmModal" class="modal-overlay" onclick="closeModalOutside(event, 'confirmModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Konfirmasi Pilihan</h3>
+        <button class="modal-close" onclick="closeModal('confirmModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="confirmCandidate" class="confirm-candidate">
+          <!-- Filled by JS -->
+        </div>
+        <p class="confirm-message">
+          Anda yakin ingin memilih pasangan calon ini? Keputusan <strong>tidak dapat dibatalkan</strong> setelah dikonfirmasi.
+        </p>
+        <div class="confirm-warning">
+          <span class="confirm-warning-icon">⚠️</span>
+          <span class="confirm-warning-text">
+            Hak pilih Anda akan ditandai sebagai "sudah digunakan" setelah voting berhasil.
+          </span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+        <button id="confirmVoteBtn" class="btn btn-primary" onclick="executeVote()">
+          <span id="confirmBtnText">Ya, Saya Pilih Ini</span>
+          <span id="confirmBtnSpinner" class="spinner" style="display: none;"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       Modal: Visi & Misi
+       ============================================ -->
+  <div id="visiModal" class="modal-overlay" onclick="closeModalOutside(event, 'visiModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Visi & Misi</h3>
+        <button class="modal-close" onclick="closeModal('visiModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="visiCandidateName" class="visi-candidate-name"></div>
+        <div id="visiContent" class="visi-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('visiModal')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       Toast Container
+       ============================================ -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- App JS -->
+  <script src="/js/app.js"></script>
+
+</body>
+</html>
