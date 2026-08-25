@@ -116,7 +116,7 @@ app.get('/api/paslon', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, vote_count
+              vision, mission, votes
       FROM candidates
       ORDER BY candidate_number ASC`
     );
@@ -124,7 +124,7 @@ app.get('/api/paslon', async (req, res) => {
     const candidates = rows.map((r) => ({
       ...r,
       photo_url: r.photo_url || '/logo-osis.png',
-      vote_count: r.vote_count || 0
+      votes: r.votes || 0
     }));
 
     return res.status(200).json({
@@ -148,7 +148,7 @@ app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, vote_count
+              vision, mission, votes
       FROM candidates
       ORDER BY candidate_number ASC`
     );
@@ -156,7 +156,7 @@ app.get('/api/candidates', async (req, res) => {
     const candidates = rows.map((r) => ({
       ...r,
       photo_url: r.photo_url || '/logo-osis.png',
-      vote_count: r.vote_count || 0
+      votes: r.votes || 0
     }));
 
     return res.status(200).json({
@@ -262,15 +262,24 @@ app.post('/api/vote', async (req, res) => {
 
     // 4. Tambah suara kandidat (+1)
     await connection.execute(
-      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
+      'UPDATE candidates SET votes = COALESCE(votes, 0) + 1 WHERE id = ?',
       [candidate_id]
     );
 
-    // 5. Tandai pemilih sudah memilih
-    await connection.execute(
-      'UPDATE voters SET is_voted = 1, voted_at = NOW() WHERE identifier = ?',
+    // 5. Tandai pemilih sudah memilih (atomic check)
+    const [voterUpdate] = await connection.execute(
+      'UPDATE voters SET is_voted = 1, voted_at = NOW() WHERE identifier = ? AND is_voted = 0',
       [identifier]
     );
+
+    if (voterUpdate.affectedRows === 0) {
+      await connection.rollback();
+      connection.release();
+      return res.status(400).json({
+        success: false,
+        error: 'Hak pilih sudah digunakan'
+      });
+    }
 
     // 6. Commit transaksi
     await connection.commit();

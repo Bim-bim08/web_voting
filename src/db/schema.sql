@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS candidates (
     vice_chairman_name TEXT NOT NULL,
     vision_mission TEXT,
     photo_url TEXT,
-    vote_count INTEGER DEFAULT 0,
+    votes INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
 );
 

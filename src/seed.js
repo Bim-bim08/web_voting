@@ -31,7 +31,7 @@ db.exec(schemaSQL);
 
 // 1. Sample Kandidat (2 Paslon)
 const insertCandidate = db.prepare(`
-  INSERT OR IGNORE INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision_mission, photo_url, vote_count)
+  INSERT OR IGNORE INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision_mission, photo_url, votes)
   VALUES (?, ?, ?, ?, ?, ?)
 `);
 
@@ -42,7 +42,7 @@ const candidates = [
     vice_chairman_name: 'Siti Nurhaliza',
     vision_mission: 'Mewujudkan OSIS yang inklusif, inovatif, dan berprestasi dengan program:\n1. Festival Bakat Siswa\n2. Perpustakaan Digital\n3.环保 School (Program Kebersihan Sekolah)',
     photo_url: '/images/candidate-1.jpg',
-    vote_count: 0
+    votes: 0
   },
   {
     candidate_number: 2,
@@ -50,13 +50,13 @@ const candidates = [
     vice_chairman_name: 'Dewi Lestari',
     vision_mission: 'Membangun semangat gotong royong dan kreativitas siswa melalui:\n1. UKM Fair (Pameran Ekstrakurikuler)\n2. Study Group Online\n3. Program Mentoring Siswa',
     photo_url: '/images/candidate-2.jpg',
-    vote_count: 0
+    votes: 0
   }
 ];
 
 console.log('🗳️  Seeding candidates...');
 for (const c of candidates) {
-  insertCandidate.run(c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision_mission, c.photo_url, c.vote_count);
+  insertCandidate.run(c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision_mission, c.photo_url, c.votes);
   console.log(`   ✓ Paslon ${c.candidate_number}: ${c.chairman_name} & ${c.vice_chairman_name}`);
 }
 

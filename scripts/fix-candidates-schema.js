@@ -45,7 +45,7 @@ async function fixSchema() {
       vice_chairman_name VARCHAR(255) NOT NULL,
       vision TEXT,
       mission TEXT,
-      vote_count INT DEFAULT 0
+      votes INT DEFAULT 0
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
   console.log('   ✓ Tabel candidates berhasil dibuat\n');

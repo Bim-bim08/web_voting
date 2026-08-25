@@ -57,11 +57,11 @@ app.get('/api/candidates', async (req, res) => {
        FROM candidates ORDER BY candidate_number`
     );
 
-    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
+    // Fallback: tambahkan photo_url default agar frontend tidak error
     const data = rows.map((r) => ({
       ...r,
       photo_url: r.photo_url || '/logo-osis.png',
-      vote_count: r.vote_count || 0
+      votes: r.votes || 0
     }));
 
     res.json({
@@ -94,9 +94,9 @@ app.get('/api/candidates/:id', async (req, res) => {
       });
     }
 
-    // Fallback: tambahkan photo_url & vote_count default
+    // Fallback: tambahkan photo_url default
     candidate.photo_url = candidate.photo_url || '/logo-osis.png';
-    candidate.vote_count = candidate.vote_count || 0;
+    candidate.votes = candidate.votes || 0;
 
     res.json({
       success: true,
@@ -170,7 +170,7 @@ app.post('/api/vote', async (req, res) => {
 
     // Transaksi: update vote + tandai token
     await connection.execute(
-      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
+      'UPDATE candidates SET votes = COALESCE(votes, 0) + 1 WHERE id = ?',
       [candidate_id]
     );
 
@@ -212,13 +212,12 @@ app.get('/api/results', async (req, res) => {
         candidate_number,
         chairman_name,
         vice_chairman_name,
-        COALESCE(vote_count, 0) AS vote_count
+        COALESCE(votes, 0) AS votes
       FROM candidates
-      ORDER BY vote_count DESC, candidate_number ASC
+      ORDER BY votes DESC, candidate_number ASC
     `);
 
-    const [totalRows] = await pool.execute(
-      'SELECT COALESCE(SUM(vote_count), 0) AS total FROM candidates'
+    const [totalRows] = await pool.execute(        'SELECT COALESCE(SUM(votes), 0) AS total FROM candidates'
     );
     const totalResult = totalRows[0];
 
