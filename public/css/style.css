@@ -289,18 +289,12 @@ p {
   margin-bottom: 2.5rem;
 }
 
-.token-icon {
-  width: 72px;
-  height: 72px;
-  background: linear-gradient(135deg, #2563EB, #7C3AED);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  margin: 0 auto 1.5rem;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+.token-logo {
+  width: 5rem;          /* w-20 = 80px */
+  height: 5rem;         /* h-20 = 80px */
+  object-fit: contain;  /* object-contain */
+  margin: 0 auto 1.5rem; /* mx-auto mb-6 */
+  display: block;
 }
 
 .token-title {
