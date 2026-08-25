@@ -160,9 +160,10 @@ p {
 }
 
 .logo-img {
-  height: 40px;
-  margin-right: 0.75rem;
-  object-fit: contain;
+  height: 2.5rem;      /* h-10 = 40px */
+  width: auto;          /* w-auto */
+  margin-right: 0.75rem; /* mr-3 */
+  object-fit: contain;  /* object-contain */
 }
 
 .logo-text {
