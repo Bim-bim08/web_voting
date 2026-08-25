@@ -159,6 +159,12 @@ p {
   box-shadow: var(--shadow-md);
 }
 
+.logo-img {
+  height: 40px;
+  margin-right: 0.75rem;
+  object-fit: contain;
+}
+
 .logo-text {
   font-weight: 800;
   font-size: 1.25rem;
