@@ -11,16 +11,16 @@ const pool = require('../src/config/db');
 const CANDIDATES_DATA = [
   {
     candidate_number: 1,
-    candidate_name: 'Ahmad Fauzan',
-    vice_candidate_name: 'Siti Nurhaliza',
+    chairman_name: 'Ahmad Fauzan',
+    vice_chairman_name: 'Siti Nurhaliza',
     vision: 'Mewujudkan OSIS yang inklusif, inovatif, dan berprestasi.',
     mission:
       '1. Festival Bakat Siswa\n2. Perpustakaan Digital\n3. Program Kebersihan Sekolah',
   },
   {
     candidate_number: 2,
-    candidate_name: 'Dimas Arya Saputra',
-    vice_candidate_name: 'Rizky Pratama',
+    chairman_name: 'Dimas Arya Saputra',
+    vice_chairman_name: 'Rizky Pratama',
     vision: 'Membangun semangat gotong royong dan kreativitas siswa.',
     mission:
       '1. UKM Fair (Pameran Ekstrakurikuler)\n2. Study Group Online\n3. Program Mentoring Siswa',
@@ -35,14 +35,14 @@ async function fixSchema() {
   await pool.execute('DROP TABLE IF EXISTS candidates');
   console.log('   ✓ Tabel candidates dihapus\n');
 
-  // 2. CREATE ulang tabel candidates dengan kolom candidate_number
+  // 2. CREATE ulang tabel candidates dengan kolom chairman_name / vice_chairman_name
   console.log('📋 Membuat ulang tabel candidates ...');
   await pool.execute(`
     CREATE TABLE candidates (
       id INT AUTO_INCREMENT PRIMARY KEY,
       candidate_number INT NOT NULL,
-      candidate_name VARCHAR(255) NOT NULL,
-      vice_candidate_name VARCHAR(255) NOT NULL,
+      chairman_name VARCHAR(255) NOT NULL,
+      vice_chairman_name VARCHAR(255) NOT NULL,
       vision TEXT,
       mission TEXT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -53,11 +53,11 @@ async function fixSchema() {
   console.log('🗳️  Menyisipkan data paslon ...');
   for (const c of CANDIDATES_DATA) {
     await pool.execute(
-      `INSERT INTO candidates (candidate_number, candidate_name, vice_candidate_name, vision, mission)
+      `INSERT INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision, mission)
        VALUES (?, ?, ?, ?, ?)`,
-      [c.candidate_number, c.candidate_name, c.vice_candidate_name, c.vision, c.mission]
+      [c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision, c.mission]
     );
-    console.log(`   ✓ Paslon ${c.candidate_number}: ${c.candidate_name} & ${c.vice_candidate_name}`);
+    console.log(`   ✓ Paslon ${c.candidate_number}: ${c.chairman_name} & ${c.vice_chairman_name}`);
   }
 
   // Tutup koneksi
