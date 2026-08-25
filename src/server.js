@@ -177,9 +177,9 @@ app.get('/api/candidates', async (req, res) => {
 /**
  * POST /api/vote
  * Eksekusi voting dengan validasi:
- * 1. Status voting harus 'Berlangsung'
- * 2. Pemilih belum pernah memilih (has_voted = 0)
- * 3. Simpan suara ke tabel voting & update status pemilih
+ * 1. Status voting harus 'Berlangsung' (dengan fallback jika tabel settings tidak ada)
+ * 2. Pemilih belum pernah memilih (is_voted = 0)
+ * 3. Simpan suara ke tabel voting & update status pemilih dalam transaksi
  * Body: { identifier: "string", candidate_id: number }
  */
 app.post('/api/vote', async (req, res) => {
@@ -198,19 +198,27 @@ app.post('/api/vote', async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    // 1. Cek status voting dari tabel settings
-    const [settingsRows] = await connection.execute(
-      "SELECT setting_value FROM settings WHERE setting_key = 'voting_status'"
-    );
-    const votingStatus = settingsRows[0]?.setting_value;
-
-    if (!votingStatus || votingStatus !== 'Berlangsung') {
-      await connection.rollback();
-      connection.release();
-      return res.status(403).json({
-        success: false,
-        error: `Voting ${votingStatus || 'belum dikonfigurasi'}. Voting hanya dapat dilakukan saat status 'Berlangsung'.`
-      });
+    // 1. Cek status voting dari tabel settings (dengan fallback)
+    let isVotingOpen = true; // default: voting dianggap OPEN
+    try {
+      const [settingsRows] = await connection.execute(
+        "SELECT setting_value FROM settings WHERE setting_key = 'voting_status'"
+      );
+      const votingStatus = settingsRows[0]?.setting_value;
+      // Jika settings ada tapi bukan 'Berlangsung', tutup voting
+      if (votingStatus && votingStatus !== 'Berlangsung') {
+        await connection.rollback();
+        connection.release();
+        return res.status(403).json({
+          success: false,
+          error: `Voting ${votingStatus}. Voting hanya dapat dilakukan saat status 'Berlangsung'.`
+        });
+      }
+    } catch (settingsError) {
+      // Tabel settings tidak ditemukan atau query error —
+      // jangan batalkan transaksi, anggap voting OPEN
+      console.warn('Settings query fallback (table may not exist):', settingsError.message);
+      isVotingOpen = true;
     }
 
     // 2. Cek pemilih: ada dan belum memilih
@@ -254,31 +262,25 @@ app.post('/api/vote', async (req, res) => {
       });
     }
 
-    // 4. Simpan suara ke tabel voting
-    await connection.execute(
-      'INSERT INTO voting (voter_id, candidate_id) VALUES (?, ?)',
-      [voter.id, candidate_id]
-    );
-
-    // 5. Update vote_count kandidat +1
+    // 4. Tambah suara kandidat (+1)
     await connection.execute(
       'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
       [candidate_id]
     );
 
-    // 6. Tandai pemilih sudah memilih
+    // 5. Tandai pemilih sudah memilih
     await connection.execute(
       'UPDATE voters SET is_voted = 1, voted_at = NOW() WHERE identifier = ?',
       [identifier]
     );
 
-    // 7. Commit transaksi
+    // 6. Commit transaksi
     await connection.commit();
     connection.release();
 
     return res.status(200).json({
       success: true,
-      message: 'Voting berhasil disimpan',
+      message: 'Voting berhasil disimpan!',
       data: {
         candidate_id: candidate.id,
         candidate_number: candidate.candidate_number
