@@ -3,7 +3,7 @@
  * Jalankan dengan: npm run seed:mysql
  */
 
-const db = require('./config/db');
+const pool = require('./config/db');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,7 +25,7 @@ async function seed() {
 
   for (const stmt of statements) {
     try {
-      await db.query(stmt);
+      await pool.execute(stmt);
     } catch (error) {
       // Abaikan error "already exists"
       if (!error.message.includes('already exists')) {
@@ -57,7 +57,7 @@ async function seed() {
   ];
 
   for (const c of candidates) {
-    await db.insert(
+    await pool.execute(
       `INSERT IGNORE INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision_mission, photo_url, vote_count)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision_mission, c.photo_url, c.vote_count]
@@ -76,7 +76,7 @@ async function seed() {
   ];
 
   for (const token of tokens) {
-    await db.insert(
+    await pool.execute(
       'INSERT IGNORE INTO tokens (token_code, is_used) VALUES (?, 0)',
       [token]
     );
@@ -85,21 +85,21 @@ async function seed() {
 
   // 4. Seed Settings (status voting default)
   console.log('\n⚙️  Seeding settings...');
-  await db.insert(
+  await pool.execute(
     "INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('voting_status', 'Belum Dimulai')"
   );
   console.log('   ✓ voting_status: Belum Dimulai');
 
   // 5. Seed Admin (1 admin default)
   console.log('\n👤 Seeding admin...');
-  await db.insert(
+  await pool.execute(
     'INSERT IGNORE INTO admins (username, password) VALUES (?, ?)',
     ['admin', 'admin123']
   );
   console.log('   ✓ Admin: admin / admin123');
 
   // Tutup koneksi
-  await db.pool.end();
+  await pool.end();
 
   console.log('\n✅ MySQL seed completed successfully!');
   console.log('   Database: db_e_election');

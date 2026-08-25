@@ -10,8 +10,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Import database MySQL
-const db = require('./config/db');
+// Import database pool langsung
+const pool = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,12 +51,12 @@ app.get('/', (req, res) => {
 // GET /api/candidates - Ambil semua kandidat
 app.get('/api/candidates', async (req, res) => {
   try {
-    const candidates = await db.query(
+    const [rows] = await pool.execute(
       'SELECT * FROM candidates ORDER BY candidate_number'
     );
     res.json({
       success: true,
-      data: candidates
+      data: rows
     });
   } catch (error) {
     res.status(500).json({
@@ -69,10 +69,11 @@ app.get('/api/candidates', async (req, res) => {
 // GET /api/candidates/:id - Ambil detail kandidat
 app.get('/api/candidates/:id', async (req, res) => {
   try {
-    const candidate = await db.queryOne(
+    const [rows] = await pool.execute(
       'SELECT * FROM candidates WHERE id = ?',
       [req.params.id]
     );
+    const candidate = rows[0];
 
     if (!candidate) {
       return res.status(404).json({
@@ -104,14 +105,22 @@ app.post('/api/vote', async (req, res) => {
     });
   }
 
+  let connection;
+
   try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
     // Cek token
-    const tokenData = await db.queryOne(
+    const [tokenRows] = await connection.execute(
       'SELECT * FROM tokens WHERE token_code = ?',
       [token]
     );
+    const tokenData = tokenRows[0];
 
     if (!tokenData) {
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({
         success: false,
         error: 'Token tidak valid'
@@ -119,6 +128,8 @@ app.post('/api/vote', async (req, res) => {
     }
 
     if (tokenData.is_used) {
+      await connection.rollback();
+      connection.release();
       return res.status(400).json({
         success: false,
         error: 'Token sudah digunakan'
@@ -126,12 +137,15 @@ app.post('/api/vote', async (req, res) => {
     }
 
     // Cek kandidat
-    const candidate = await db.queryOne(
+    const [candidateRows] = await connection.execute(
       'SELECT * FROM candidates WHERE id = ?',
       [candidate_id]
     );
+    const candidate = candidateRows[0];
 
     if (!candidate) {
+      await connection.rollback();
+      connection.release();
       return res.status(404).json({
         success: false,
         error: 'Kandidat tidak ditemukan'
@@ -139,19 +153,18 @@ app.post('/api/vote', async (req, res) => {
     }
 
     // Transaksi: update vote + tandai token
-    await db.transaction(async (conn) => {
-      // Update vote count
-      await conn.execute(
-        'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
-        [candidate_id]
-      );
+    await connection.execute(
+      'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
+      [candidate_id]
+    );
 
-      // Tandai token terpakai
-      await conn.execute(
-        'UPDATE tokens SET is_used = 1, used_at = NOW() WHERE id = ?',
-        [tokenData.id]
-      );
-    });
+    await connection.execute(
+      'UPDATE tokens SET is_used = 1, used_at = NOW() WHERE id = ?',
+      [tokenData.id]
+    );
+
+    await connection.commit();
+    connection.release();
 
     res.json({
       success: true,
@@ -159,6 +172,15 @@ app.post('/api/vote', async (req, res) => {
     });
 
   } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Rollback error:', rollbackError.message);
+      }
+      connection.release();
+    }
+
     res.status(500).json({
       success: false,
       error: error.message
@@ -169,7 +191,7 @@ app.post('/api/vote', async (req, res) => {
 // GET /api/results - Hasil voting
 app.get('/api/results', async (req, res) => {
   try {
-    const results = await db.query(`
+    const [results] = await pool.execute(`
       SELECT
         candidate_number,
         chairman_name,
@@ -179,9 +201,10 @@ app.get('/api/results', async (req, res) => {
       ORDER BY vote_count DESC, candidate_number ASC
     `);
 
-    const totalResult = await db.queryOne(
+    const [totalRows] = await pool.execute(
       'SELECT SUM(vote_count) as total FROM candidates'
     );
+    const totalResult = totalRows[0];
 
     res.json({
       success: true,
@@ -202,9 +225,14 @@ app.get('/api/results', async (req, res) => {
 // Start Server
 // ============================================
 async function startServer() {
-  // Test koneksi database
-  const connected = await db.testConnection();
-  if (!connected) {
+  try {
+    const conn = await pool.getConnection();
+    console.log('✅ MySQL connected successfully!');
+    console.log(`   📦 Database: ${process.env.DB_NAME}`);
+    console.log(`   🌐 Host: ${process.env.DB_HOST}:${process.env.DB_PORT || 3306}`);
+    conn.release();
+  } catch (error) {
+    console.error('❌ MySQL connection failed:', error.message);
     console.error('\n❌ Cannot start server without database connection');
     console.error('   Pastikan MySQL berjalan dan database db_e_election sudah ada\n');
     process.exit(1);
@@ -228,12 +256,12 @@ startServer();
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down...');
-  await db.pool.end();
+  await pool.end();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 Shutting down...');
-  await db.pool.end();
+  await pool.end();
   process.exit(0);
 });

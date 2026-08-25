@@ -10,8 +10,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Import database module
-const db = require('./config/db');
+// Import database pool langsung
+const pool = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,7 +34,6 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
  * Serve frontend / API Info
  */
 app.get('/', (req, res) => {
-  // Serve index.html untuk frontend
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
@@ -63,7 +62,6 @@ app.get('/api', (req, res) => {
 app.post('/api/tokens/validate', async (req, res) => {
   const { identifier } = req.body;
 
-  // Validasi input
   if (!identifier) {
     return res.status(400).json({
       success: false,
@@ -72,13 +70,12 @@ app.post('/api/tokens/validate', async (req, res) => {
   }
 
   try {
-    // Cek pemilih di database
-    const voter = await db.queryOne(
+    const [rows] = await pool.execute(
       'SELECT * FROM voters WHERE identifier = ?',
       [identifier]
     );
+    const voter = rows[0];
 
-    // Pemilih tidak ditemukan
     if (!voter) {
       return res.status(404).json({
         success: false,
@@ -86,7 +83,6 @@ app.post('/api/tokens/validate', async (req, res) => {
       });
     }
 
-    // Sudah menggunakan hak pilih
     if (voter.is_voted === 1) {
       return res.status(400).json({
         success: false,
@@ -94,7 +90,6 @@ app.post('/api/tokens/validate', async (req, res) => {
       });
     }
 
-    // Pemilih valid
     return res.status(200).json({
       success: true,
       message: 'Pemilih terverifikasi',
@@ -119,7 +114,7 @@ app.post('/api/tokens/validate', async (req, res) => {
  */
 app.get('/api/paslon', async (req, res) => {
   try {
-    const candidates = await db.query(
+    const [candidates] = await pool.execute(
       `SELECT
         id,
         candidate_number,
@@ -151,7 +146,7 @@ app.get('/api/paslon', async (req, res) => {
  */
 app.get('/api/candidates', async (req, res) => {
   try {
-    const candidates = await db.query(
+    const [candidates] = await pool.execute(
       `SELECT
         id,
         candidate_number,
@@ -188,7 +183,6 @@ app.get('/api/candidates', async (req, res) => {
 app.post('/api/vote', async (req, res) => {
   const { identifier, candidate_id } = req.body;
 
-  // Validasi input awal
   if (!identifier || !candidate_id) {
     return res.status(400).json({
       success: false,
@@ -199,10 +193,7 @@ app.post('/api/vote', async (req, res) => {
   let connection;
 
   try {
-    // Ambil koneksi dari pool untuk transaksi
-    connection = await db.pool.getConnection();
-
-    // Mulai transaksi
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
     // 1. Cek status voting dari tabel settings
@@ -220,7 +211,7 @@ app.post('/api/vote', async (req, res) => {
       });
     }
 
-    // 2. Cek pemilih: ada dan belum memilih (has_voted = 0)
+    // 2. Cek pemilih: ada dan belum memilih
     const [voters] = await connection.execute(
       'SELECT id, identifier, is_voted FROM voters WHERE identifier = ?',
       [identifier]
@@ -245,7 +236,7 @@ app.post('/api/vote', async (req, res) => {
       });
     }
 
-    // 3. Cek kandidat: ada di database
+    // 3. Cek kandidat
     const [candidates] = await connection.execute(
       'SELECT id, candidate_number FROM candidates WHERE id = ?',
       [candidate_id]
@@ -273,7 +264,7 @@ app.post('/api/vote', async (req, res) => {
       [candidate_id]
     );
 
-    // 6. Tandai pemilih sudah memilih (has_voted = 1)
+    // 6. Tandai pemilih sudah memilih
     await connection.execute(
       'UPDATE voters SET is_voted = 1, voted_at = NOW() WHERE identifier = ?',
       [identifier]
@@ -293,7 +284,6 @@ app.post('/api/vote', async (req, res) => {
     });
 
   } catch (error) {
-    // Rollback jika ada error
     if (connection) {
       try {
         await connection.rollback();
@@ -329,12 +319,16 @@ module.exports = app;
 // Start Server (hanya untuk local development)
 // ============================================
 if (process.env.VERCEL !== '1') {
-  // Local development — test DB & jalankan server
   async function startServer() {
-    const connected = await db.testConnection();
-    if (!connected) {
+    try {
+      const conn = await pool.getConnection();
+      console.log('✅ MySQL connected successfully!');
+      console.log(`   📦 Database: ${process.env.DB_NAME}`);
+      console.log(`   🌐 Host: ${process.env.DB_HOST}:${process.env.DB_PORT || 3306}`);
+      conn.release();
+    } catch (error) {
+      console.error('❌ MySQL connection failed:', error.message);
       console.error('\n❌ Tidak bisa menjalankan server tanpa koneksi database');
-      console.error('   Pastikan MySQL berjalan dan database db_e_election sudah ada\n');
       process.exit(1);
     }
 
@@ -349,14 +343,13 @@ if (process.env.VERCEL !== '1') {
 
   startServer();
 
-  // Graceful shutdown (hanya local)
   process.on('SIGINT', async () => {
-    await db.pool.end();
+    await pool.end();
     process.exit(0);
   });
 
   process.on('SIGTERM', async () => {
-    await db.pool.end();
+    await pool.end();
     process.exit(0);
   });
 }
