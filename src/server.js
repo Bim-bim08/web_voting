@@ -120,7 +120,8 @@ app.get('/api/paslon', async (req, res) => {
         candidate_number,
         chairman_name,
         vice_chairman_name,
-        vision_mission,
+        vision,
+        mission,
         photo_url,
         vote_count
       FROM candidates
@@ -152,7 +153,8 @@ app.get('/api/candidates', async (req, res) => {
         candidate_number,
         chairman_name,
         vice_chairman_name,
-        vision_mission,
+        vision,
+        mission,
         photo_url,
         vote_count
       FROM candidates

@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS candidates (
     candidate_number INT NOT NULL UNIQUE,
     chairman_name VARCHAR(255) NOT NULL,
     vice_chairman_name VARCHAR(255) NOT NULL,
-    vision_mission TEXT,
+    vision TEXT,
+    mission TEXT,
     photo_url VARCHAR(500),
     vote_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

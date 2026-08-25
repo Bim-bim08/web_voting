@@ -42,7 +42,8 @@ async function seed() {
       candidate_number: 1,
       chairman_name: 'Ahmad Rizky Pratama',
       vice_chairman_name: 'Siti Nurhaliza',
-      vision_mission: 'Mewujudkan OSIS yang inklusif, inovatif, dan berprestasi dengan program:\n1. Festival Bakat Siswa\n2. Perpustakaan Digital\n3. Program Kebersihan Sekolah',
+      vision: 'Mewujudkan OSIS yang inklusif, inovatif, dan berprestasi.',
+      mission: '1. Festival Bakat Siswa\n2. Perpustakaan Digital\n3. Program Kebersihan Sekolah',
       photo_url: '/images/candidate-1.jpg',
       vote_count: 0
     },
@@ -50,7 +51,8 @@ async function seed() {
       candidate_number: 2,
       chairman_name: 'Budi Santoso',
       vice_chairman_name: 'Dewi Lestari',
-      vision_mission: 'Membangun semangat gotong royong dan kreativitas siswa melalui:\n1. UKM Fair (Pameran Ekstrakurikuler)\n2. Study Group Online\n3. Program Mentoring Siswa',
+      vision: 'Membangun semangat gotong royong dan kreativitas siswa.',
+      mission: '1. UKM Fair (Pameran Ekstrakurikuler)\n2. Study Group Online\n3. Program Mentoring Siswa',
       photo_url: '/images/candidate-2.jpg',
       vote_count: 0
     }
@@ -58,9 +60,9 @@ async function seed() {
 
   for (const c of candidates) {
     await pool.execute(
-      `INSERT IGNORE INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision_mission, photo_url, vote_count)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision_mission, c.photo_url, c.vote_count]
+      `INSERT IGNORE INTO candidates (candidate_number, chairman_name, vice_chairman_name, vision, mission, photo_url, vote_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [c.candidate_number, c.chairman_name, c.vice_chairman_name, c.vision, c.mission, c.photo_url, c.vote_count]
     );
     console.log(`   ✓ Paslon ${c.candidate_number}: ${c.chairman_name} & ${c.vice_chairman_name}`);
   }

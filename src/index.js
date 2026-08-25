@@ -52,7 +52,9 @@ app.get('/', (req, res) => {
 app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM candidates ORDER BY candidate_number'
+      `SELECT id, candidate_number, chairman_name, vice_chairman_name,
+              vision, mission, photo_url, vote_count
+       FROM candidates ORDER BY candidate_number`
     );
     res.json({
       success: true,
@@ -70,7 +72,9 @@ app.get('/api/candidates', async (req, res) => {
 app.get('/api/candidates/:id', async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM candidates WHERE id = ?',
+      `SELECT id, candidate_number, chairman_name, vice_chairman_name,
+              vision, mission, photo_url, vote_count
+       FROM candidates WHERE id = ?`,
       [req.params.id]
     );
     const candidate = rows[0];
