@@ -116,12 +116,11 @@ app.get('/api/paslon', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission
+              vision, mission, vote_count
       FROM candidates
       ORDER BY candidate_number ASC`
     );
 
-    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
     const candidates = rows.map((r) => ({
       ...r,
       photo_url: r.photo_url || '/logo-osis.png',
@@ -149,12 +148,11 @@ app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission
+              vision, mission, vote_count
       FROM candidates
       ORDER BY candidate_number ASC`
     );
 
-    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
     const candidates = rows.map((r) => ({
       ...r,
       photo_url: r.photo_url || '/logo-osis.png',
