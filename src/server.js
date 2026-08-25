@@ -239,6 +239,39 @@ app.get('/api/paslon', async (req, res) => {
  */
 app.get('/api/candidates', async (req, res) => {
   try {
+    const candidateId = req.query.id;
+
+    if (candidateId) {
+      // Fetch single candidate by ID
+      const [rows] = await pool.execute(
+        `SELECT id, candidate_number, chairman_name, vice_chairman_name,
+                vision, mission, votes, photo
+        FROM candidates
+        WHERE id = ?`,
+        [candidateId]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Kandidat tidak ditemukan'
+        });
+      }
+
+      const r = rows[0];
+      return res.status(200).json([{
+        id: r.id,
+        candidate_number: r.candidate_number,
+        chairman_name: r.chairman_name,
+        vice_chairman_name: r.vice_chairman_name,
+        vision: r.vision,
+        mission: r.mission,
+        votes: r.votes || 0,
+        photo: r.photo || null
+      }]);
+    }
+
+    // No ID provided — return all candidates
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
               vision, mission, votes, photo
