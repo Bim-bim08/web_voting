@@ -1,26 +1,36 @@
 /**
  * MySQL Database Connection
  * Menggunakan mysql2/promise untuk async/await
+ * Dirancang aman untuk Vercel Serverless (tidak crash saat env vars kosong)
  */
 
 const mysql = require('mysql2/promise');
 
 // Konfigurasi dari environment variables
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT, 10) || 3306,
+  user: process.env.DB_USER,
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'db_e_election',
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  // Format datetime ke ISO string
   timezone: '+07:00',
   charset: 'utf8mb4'
 };
 
-// Buat connection pool
+// Validasi config wajib
+const requiredVars = ['DB_HOST', 'DB_USER', 'DB_NAME'];
+const missingVars = requiredVars.filter((v) => !process.env[v]);
+
+if (missingVars.length > 0) {
+  console.warn(`⚠️  Missing DB env vars: ${missingVars.join(', ')}`);
+  console.warn('   Database queries will fail until these are set.');
+}
+
+// Buat connection pool (pool dibuat saat module pertama kali di-load)
+// Pool tidak akan crash saat dibuat — error muncul saat query dieksekusi
 const pool = mysql.createPool(dbConfig);
 
 // Fungsi test koneksi

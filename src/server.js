@@ -1,6 +1,7 @@
 /**
  * E-Election OSIS - REST API Server
  * Express.js + MySQL (mysql2/promise)
+ * Compatible dengan Vercel Serverless & local development
  */
 
 require('dotenv').config();
@@ -47,6 +48,7 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     endpoints: {
       validateToken: 'POST /api/tokens/validate',
+      paslon: 'GET /api/paslon',
       candidates: 'GET /api/candidates',
       vote: 'POST /api/vote'
     }
@@ -319,34 +321,42 @@ app.use((req, res) => {
 });
 
 // ============================================
-// Start Server
+// Export app untuk Vercel Serverless
 // ============================================
-async function startServer() {
-  // Test koneksi database
-  const connected = await db.testConnection();
-  if (!connected) {
-    console.error('\n❌ Tidak bisa menjalankan server tanpa koneksi database');
-    process.exit(1);
+module.exports = app;
+
+// ============================================
+// Start Server (hanya untuk local development)
+// ============================================
+if (process.env.VERCEL !== '1') {
+  // Local development — test DB & jalankan server
+  async function startServer() {
+    const connected = await db.testConnection();
+    if (!connected) {
+      console.error('\n❌ Tidak bisa menjalankan server tanpa koneksi database');
+      console.error('   Pastikan MySQL berjalan dan database db_e_election sudah ada\n');
+      process.exit(1);
+    }
+
+    app.listen(PORT, () => {
+      console.log(`\n🗳️  E-Election OSIS API Server`);
+      console.log(`   🌐 http://localhost:${PORT}`);
+      console.log(`   📦 POST /api/tokens/validate`);
+      console.log(`   📋 GET  /api/paslon`);
+      console.log(`   🗳️  POST /api/vote\n`);
+    });
   }
 
-  app.listen(PORT, () => {
-    console.log(`\n🗳️  E-Election OSIS API Server`);
-    console.log(`   🌐 http://localhost:${PORT}`);
-    console.log(`   📦 POST /api/tokens/validate`);
-    console.log(`   📋 GET  /api/paslon`);
-    console.log(`   🗳️  POST /api/vote\n`);
+  startServer();
+
+  // Graceful shutdown (hanya local)
+  process.on('SIGINT', async () => {
+    await db.pool.end();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    await db.pool.end();
+    process.exit(0);
   });
 }
-
-startServer();
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await db.pool.end();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await db.pool.end();
-  process.exit(0);
-});
