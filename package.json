@@ -7,7 +7,9 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seed.js",
-    "seed:mysql": "node src/seed-mysql.js"
+    "seed:mysql": "node src/seed-mysql.js",
+    "seed:paslon": "node scripts/seed-paslon.js",
+    "fix:db": "node scripts/fix-candidates-schema.js"
   },
   "keywords": [
     "e-election",
