@@ -148,7 +148,7 @@ function setTokenLoading(isLoading) {
 // ============================================
 async function loadCandidates() {
   try {
-    const response = await fetch('/api/candidates');
+    const response = await fetch('/api/paslon');
     const data = await response.json();
 
     if (!response.ok) {

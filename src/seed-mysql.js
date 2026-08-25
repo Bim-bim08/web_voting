@@ -83,7 +83,14 @@ async function seed() {
     console.log(`   ✓ Token: ${token}`);
   }
 
-  // 4. Seed Admin (1 admin default)
+  // 4. Seed Settings (status voting default)
+  console.log('\n⚙️  Seeding settings...');
+  await db.insert(
+    "INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('voting_status', 'Belum Dimulai')"
+  );
+  console.log('   ✓ voting_status: Belum Dimulai');
+
+  // 5. Seed Admin (1 admin default)
   console.log('\n👤 Seeding admin...');
   await db.insert(
     'INSERT IGNORE INTO admins (username, password) VALUES (?, ?)',

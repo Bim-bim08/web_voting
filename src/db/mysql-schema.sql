@@ -50,6 +50,28 @@ CREATE TABLE IF NOT EXISTS tokens (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
+-- Tabel Pengaturan (Settings)
+-- ============================================
+CREATE TABLE IF NOT EXISTS settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE COMMENT 'Nama pengaturan',
+    setting_value VARCHAR(255) NOT NULL COMMENT 'Nilai pengaturan',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- Tabel Voting (Catatan Suara)
+-- ============================================
+CREATE TABLE IF NOT EXISTS voting (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    voter_id INT NOT NULL COMMENT 'ID pemilih dari tabel voters',
+    candidate_id INT NOT NULL COMMENT 'ID kandidat dari tabel candidates',
+    voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (voter_id) REFERENCES voters(id) ON DELETE CASCADE,
+    FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- Tabel Admin
 -- ============================================
 CREATE TABLE IF NOT EXISTS admins (

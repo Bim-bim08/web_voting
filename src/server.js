@@ -112,6 +112,38 @@ app.post('/api/tokens/validate', async (req, res) => {
 });
 
 /**
+ * GET /api/paslon
+ * Ambil daftar paslon dari Web Admin
+ */
+app.get('/api/paslon', async (req, res) => {
+  try {
+    const candidates = await db.query(
+      `SELECT
+        id,
+        candidate_number,
+        chairman_name,
+        vice_chairman_name,
+        vision_mission,
+        photo_url,
+        vote_count
+      FROM candidates
+      ORDER BY candidate_number ASC`
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: candidates
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /api/candidates
  * Ambil semua data kandidat (field aman saja)
  */
@@ -145,7 +177,10 @@ app.get('/api/candidates', async (req, res) => {
 
 /**
  * POST /api/vote
- * Eksekusi voting
+ * Eksekusi voting dengan validasi:
+ * 1. Status voting harus 'Berlangsung'
+ * 2. Pemilih belum pernah memilih (has_voted = 0)
+ * 3. Simpan suara ke tabel voting & update status pemilih
  * Body: { identifier: "string", candidate_id: number }
  */
 app.post('/api/vote', async (req, res) => {
@@ -168,7 +203,22 @@ app.post('/api/vote', async (req, res) => {
     // Mulai transaksi
     await connection.beginTransaction();
 
-    // 1. Cek pemilih: ada dan belum memilih
+    // 1. Cek status voting dari tabel settings
+    const [settingsRows] = await connection.execute(
+      "SELECT setting_value FROM settings WHERE setting_key = 'voting_status'"
+    );
+    const votingStatus = settingsRows[0]?.setting_value;
+
+    if (!votingStatus || votingStatus !== 'Berlangsung') {
+      await connection.rollback();
+      connection.release();
+      return res.status(403).json({
+        success: false,
+        error: `Voting ${votingStatus || 'belum dikonfigurasi'}. Voting hanya dapat dilakukan saat status 'Berlangsung'.`
+      });
+    }
+
+    // 2. Cek pemilih: ada dan belum memilih (has_voted = 0)
     const [voters] = await connection.execute(
       'SELECT id, identifier, is_voted FROM voters WHERE identifier = ?',
       [identifier]
@@ -189,11 +239,11 @@ app.post('/api/vote', async (req, res) => {
       connection.release();
       return res.status(400).json({
         success: false,
-        error: 'Anda sudah menggunakan hak pilih Anda'
+        error: 'Anda sudah menggunakan hak pilih Anda (double voting tidak diperbolehkan)'
       });
     }
 
-    // 2. Cek kandidat: ada di database
+    // 3. Cek kandidat: ada di database
     const [candidates] = await connection.execute(
       'SELECT id, candidate_number FROM candidates WHERE id = ?',
       [candidate_id]
@@ -209,19 +259,25 @@ app.post('/api/vote', async (req, res) => {
       });
     }
 
-    // 3. Update vote_count kandidat +1
+    // 4. Simpan suara ke tabel voting
+    await connection.execute(
+      'INSERT INTO voting (voter_id, candidate_id) VALUES (?, ?)',
+      [voter.id, candidate_id]
+    );
+
+    // 5. Update vote_count kandidat +1
     await connection.execute(
       'UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?',
       [candidate_id]
     );
 
-    // 4. Tandai pemilih sudah memilih
+    // 6. Tandai pemilih sudah memilih (has_voted = 1)
     await connection.execute(
       'UPDATE voters SET is_voted = 1, voted_at = NOW() WHERE identifier = ?',
       [identifier]
     );
 
-    // 5. Commit transaksi
+    // 7. Commit transaksi
     await connection.commit();
     connection.release();
 
@@ -277,7 +333,7 @@ async function startServer() {
     console.log(`\n🗳️  E-Election OSIS API Server`);
     console.log(`   🌐 http://localhost:${PORT}`);
     console.log(`   📦 POST /api/tokens/validate`);
-    console.log(`   📋 GET  /api/candidates`);
+    console.log(`   📋 GET  /api/paslon`);
     console.log(`   🗳️  POST /api/vote\n`);
   });
 }
