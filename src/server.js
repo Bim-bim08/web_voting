@@ -26,6 +26,22 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ============================================
+// CORS Middleware untuk API Routes
+// ============================================
+function apiCors(req, res, next) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+}
+
+app.use('/api', apiCors);
+
+// ============================================
 // Routes
 // ============================================
 
@@ -148,21 +164,23 @@ app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission
+              vision, mission, votes, photo
       FROM candidates
       ORDER BY candidate_number ASC`
     );
 
     const candidates = rows.map((r) => ({
-      ...r,
-      photo_url: r.photo_url || '/logo-osis.png',
-      votes: r.votes || 0
+      id: r.id,
+      candidate_number: r.candidate_number,
+      chairman_name: r.chairman_name,
+      vice_chairman_name: r.vice_chairman_name,
+      vision: r.vision,
+      mission: r.mission,
+      votes: r.votes || 0,
+      photo: r.photo || null
     }));
 
-    return res.status(200).json({
-      success: true,
-      data: candidates
-    });
+    return res.status(200).json(candidates);
 
   } catch (error) {
     return res.status(500).json({

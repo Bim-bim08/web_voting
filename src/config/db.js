@@ -46,6 +46,20 @@ async function ensureVotesColumn() {
     } else {
       console.log('✅ Kolom `votes` sudah ada di tabel candidates');
     }
+
+    // Cek apakah kolom photo sudah ada
+    const [photoCols] = await conn.execute(
+      "SHOW COLUMNS FROM candidates LIKE 'photo'"
+    );
+
+    if (photoCols.length === 0) {
+      await conn.execute(
+        'ALTER TABLE candidates ADD COLUMN photo VARCHAR(500) NULL'
+      );
+      console.log('✅ Migration: kolom `photo` ditambahkan ke tabel candidates');
+    } else {
+      console.log('✅ Kolom `photo` sudah ada di tabel candidates');
+    }
   } catch (error) {
     // Jangan crash server — log warning saja
     console.warn('⚠️  Auto-migration skip:', error.message);
