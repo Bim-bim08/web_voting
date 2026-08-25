@@ -53,12 +53,20 @@ app.get('/api/candidates', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, photo_url, vote_count
+              vision, mission
        FROM candidates ORDER BY candidate_number`
     );
+
+    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
+    const data = rows.map((r) => ({
+      ...r,
+      photo_url: r.photo_url || '/logo-osis.png',
+      vote_count: r.vote_count || 0
+    }));
+
     res.json({
       success: true,
-      data: rows
+      data: data
     });
   } catch (error) {
     res.status(500).json({
@@ -73,7 +81,7 @@ app.get('/api/candidates/:id', async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT id, candidate_number, chairman_name, vice_chairman_name,
-              vision, mission, photo_url, vote_count
+              vision, mission
        FROM candidates WHERE id = ?`,
       [req.params.id]
     );
@@ -85,6 +93,10 @@ app.get('/api/candidates/:id', async (req, res) => {
         error: 'Kandidat tidak ditemukan'
       });
     }
+
+    // Fallback: tambahkan photo_url & vote_count default
+    candidate.photo_url = candidate.photo_url || '/logo-osis.png';
+    candidate.vote_count = candidate.vote_count || 0;
 
     res.json({
       success: true,
@@ -200,13 +212,13 @@ app.get('/api/results', async (req, res) => {
         candidate_number,
         chairman_name,
         vice_chairman_name,
-        vote_count
+        COALESCE(vote_count, 0) AS vote_count
       FROM candidates
       ORDER BY vote_count DESC, candidate_number ASC
     `);
 
     const [totalRows] = await pool.execute(
-      'SELECT SUM(vote_count) as total FROM candidates'
+      'SELECT COALESCE(SUM(vote_count), 0) AS total FROM candidates'
     );
     const totalResult = totalRows[0];
 

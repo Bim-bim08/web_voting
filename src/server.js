@@ -114,19 +114,19 @@ app.post('/api/tokens/validate', async (req, res) => {
  */
 app.get('/api/paslon', async (req, res) => {
   try {
-    const [candidates] = await pool.execute(
-      `SELECT
-        id,
-        candidate_number,
-        chairman_name,
-        vice_chairman_name,
-        vision,
-        mission,
-        photo_url,
-        vote_count
+    const [rows] = await pool.execute(
+      `SELECT id, candidate_number, chairman_name, vice_chairman_name,
+              vision, mission
       FROM candidates
       ORDER BY candidate_number ASC`
     );
+
+    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
+    const candidates = rows.map((r) => ({
+      ...r,
+      photo_url: r.photo_url || '/logo-osis.png',
+      vote_count: r.vote_count || 0
+    }));
 
     return res.status(200).json({
       success: true,
@@ -147,19 +147,19 @@ app.get('/api/paslon', async (req, res) => {
  */
 app.get('/api/candidates', async (req, res) => {
   try {
-    const [candidates] = await pool.execute(
-      `SELECT
-        id,
-        candidate_number,
-        chairman_name,
-        vice_chairman_name,
-        vision,
-        mission,
-        photo_url,
-        vote_count
+    const [rows] = await pool.execute(
+      `SELECT id, candidate_number, chairman_name, vice_chairman_name,
+              vision, mission
       FROM candidates
       ORDER BY candidate_number ASC`
     );
+
+    // Fallback: tambahkan photo_url & vote_count default agar frontend tidak error
+    const candidates = rows.map((r) => ({
+      ...r,
+      photo_url: r.photo_url || '/logo-osis.png',
+      vote_count: r.vote_count || 0
+    }));
 
     return res.status(200).json({
       success: true,
