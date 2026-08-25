@@ -24,11 +24,26 @@
        ============================================ -->
   <header class="header">
     <div class="container">
-      <a href="#" class="logo" onclick="goToTokenPage(); return false;">
-        <div class="logo-icon">🗳️</div>
-        <span class="logo-text">E-Election OSIS</span>
-      </a>
-      <span class="header-badge" id="headerBadge">Verifikasi Pemilih</span>
+      <div class="header-left">
+        <a href="#" class="logo" onclick="goToTokenPage(); return false;">
+          <div class="logo-icon">🗳️</div>
+          <span class="logo-text">E-Election OSIS</span>
+        </a>
+        <span class="header-badge" id="headerBadge">Verifikasi Pemilih</span>
+      </div>
+      <div class="header-right">
+        <div class="header-badge-active" id="headerActiveBadge" style="display: none;">
+          <span class="badge-dot"></span>
+          Pemilihan Aktif
+        </div>
+        <div class="user-chip" id="userChip" style="display: none;">
+          <div class="user-avatar" id="userAvatar">—</div>
+          <div class="user-info">
+            <span class="user-name" id="userName">—</span>
+            <span class="user-role" id="userRole">—</span>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 

@@ -32,6 +32,11 @@ const elements = {
   // Booth
   candidatesGrid: document.getElementById('candidatesGrid'),
   headerBadge: document.getElementById('headerBadge'),
+  headerActiveBadge: document.getElementById('headerActiveBadge'),
+  userChip: document.getElementById('userChip'),
+  userAvatar: document.getElementById('userAvatar'),
+  userName: document.getElementById('userName'),
+  userRole: document.getElementById('userRole'),
 
   // Modals
   confirmModal: document.getElementById('confirmModal'),
@@ -62,6 +67,8 @@ function showPage(pageName) {
   if (pageName === 'token') {
     elements.tokenPage.classList.add('active');
     elements.headerBadge.textContent = 'Verifikasi Pemilih';
+    elements.headerActiveBadge.style.display = 'none';
+    elements.userChip.style.display = 'none';
     const voterGreeting = document.getElementById('voterGreeting');
     if (voterGreeting) {
       voterGreeting.textContent = 'Pilih pasangan calon ketua dan wakil ketua OSIS pilihan Anda.';
@@ -69,6 +76,7 @@ function showPage(pageName) {
   } else if (pageName === 'booth') {
     elements.boothPage.classList.add('active');
     elements.headerBadge.textContent = 'Bilik Suara';
+    elements.headerActiveBadge.style.display = 'inline-flex';
   }
 }
 
@@ -83,6 +91,26 @@ function goToTokenPage() {
 
 function goToBoothPage() {
   showPage('booth');
+}
+
+// ============================================
+// User Chip Helpers
+// ============================================
+function showUserChip(voterData) {
+  const initials = getInitials(voterData.full_name);
+  elements.userAvatar.textContent = initials;
+  elements.userName.textContent = voterData.full_name;
+  elements.userRole.textContent = voterData.role === 'siswa' ? 'Siswa' : 'Guru';
+  elements.userChip.style.display = 'inline-flex';
+}
+
+function getInitials(name) {
+  return name
+    .split(' ')
+    .map(w => w.charAt(0))
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 }
 
 // ============================================
@@ -122,6 +150,8 @@ async function handleTokenSubmit(e) {
     // Delay sebentar lalu pindah halaman
     setTimeout(async () => {
       await loadCandidates();
+      // Tampilkan user chip
+      showUserChip(data.data);
       // Tampilkan nama pemilih di header Bilik Suara
       const voterGreeting = document.getElementById('voterGreeting');
       if (voterGreeting) {
@@ -163,37 +193,117 @@ async function loadCandidates() {
   }
 }
 
+// ============================================
+// Render Candidates - Modern Card Design
+// ============================================
 function renderCandidates(candidates) {
-  elements.candidatesGrid.innerHTML = candidates.map(candidate => `
-    <div class="candidate-card">
-      <div class="candidate-photo-wrapper">
-        <img
-          class="candidate-photo"
-          src="${candidate.photo_url || 'https://via.placeholder.com/400x300/E5E7EB/9CA3AF?text=Foto+Paslon'}"
-          alt="Foto ${candidate.chairman_name}"
-          onerror="this.src='https://via.placeholder.com/400x300/E5E7EB/9CA3AF?text=Foto+Paslon'"
-        >
-        <div class="candidate-number">${candidate.candidate_number}</div>
-      </div>
+  elements.candidatesGrid.innerHTML = candidates.map((candidate, index) => {
+    const classNum = `paslon-${candidate.candidate_number}`;
+    const numberStr = String(candidate.candidate_number).padStart(2, '0');
+    const missionItems = parseMissionList(candidate.mission);
 
-      <div class="candidate-body">
-        <div class="candidate-label">Pasangan Calon</div>
-        <div class="candidate-names">
-          <div class="candidate-chairman">${candidate.chairman_name}</div>
-          <div class="candidate-vice">& ${candidate.vice_chairman_name}</div>
+    return `
+      <div class="candidate-card ${classNum}">
+        <!-- Photo Area -->
+        <div class="candidate-photo-wrapper">
+          <img
+            class="candidate-photo"
+            src="${candidate.photo_url || 'https://via.placeholder.com/400x300/E2E8F0/94A3B8?text=Foto+Paslon'}"
+            alt="Foto ${candidate.chairman_name}"
+            onerror="this.src='https://via.placeholder.com/400x300/E2E8F0/94A3B8?text=Foto+Paslon'"
+          >
+          <!-- Badge Nomor Urut Bulat -->
+          <div class="candidate-number-badge">
+            <span class="number-label">No.</span>
+            <span class="number-value">${numberStr}</span>
+          </div>
+          <!-- Label Foto -->
+          <div class="candidate-photo-labels">
+            <div class="candidate-photo-label">
+              <span class="candidate-photo-label-icon">👤</span>
+              Ketua
+            </div>
+            <div class="candidate-photo-label">
+              <span class="candidate-photo-label-icon">👤</span>
+              Wakil
+            </div>
+          </div>
         </div>
 
-        <div class="candidate-actions">
-          <button class="btn-visi" onclick='showVisiMisi(${JSON.stringify(candidate).replace(/'/g, "&#39;")})'>
-            Lihat Visi & Misi
-          </button>
-          <button class="btn-vote" onclick='openConfirmModal(${JSON.stringify(candidate).replace(/'/g, "&#39;")})'>
-            Pilih Paslon
-          </button>
+        <!-- Card Body -->
+        <div class="candidate-body">
+          <div class="candidate-label">Pasangan Calon</div>
+          <div class="candidate-names">
+            <div class="candidate-chairman">${candidate.chairman_name}</div>
+            <div class="candidate-vice">& ${candidate.vice_chairman_name}</div>
+          </div>
+
+          <!-- Tab Visi & Misi -->
+          <div class="visi-misi-tabs">
+            <div class="tab-buttons">
+              <button class="tab-btn active" onclick="switchTab(this, 'tab-visi-${candidate.id}')">
+                <span>🎯</span> Visi
+              </button>
+              <button class="tab-btn" onclick="switchTab(this, 'tab-misi-${candidate.id}')">
+                <span>📋</span> Misi
+              </button>
+            </div>
+            <div class="tab-content active" id="tab-visi-${candidate.id}">
+              <div class="tab-content-text">${candidate.vision || 'Visi belum tersedia.'}</div>
+            </div>
+            <div class="tab-content" id="tab-misi-${candidate.id}">
+              ${missionItems.length > 0
+                ? `<ul class="tab-content-list">
+                    ${missionItems.map((item, i) => `
+                      <li>
+                        <span class="list-icon">${i + 1}</span>
+                        <span>${item}</span>
+                      </li>
+                    `).join('')}
+                   </ul>`
+                : '<div class="tab-content-text">Misi belum tersedia.</div>'
+              }
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="candidate-actions">
+            <button class="btn-visi" onclick='showVisiMisi(${JSON.stringify(candidate).replace(/'/g, "&#39;")})'>
+              📄 Detail
+            </button>
+            <button class="btn-vote" onclick='openConfirmModal(${JSON.stringify(candidate).replace(/'/g, "&#39;")})'>
+              <span class="btn-vote-icon">🗳️</span>
+              Pilih Paslon
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+}
+
+// ============================================
+// Tab Switching
+// ============================================
+function switchTab(btn, tabId) {
+  const card = btn.closest('.candidate-card');
+  // Deactivate all tabs in this card
+  card.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  card.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  // Activate selected
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ============================================
+// Mission Parser
+// ============================================
+function parseMissionList(mission) {
+  if (!mission) return [];
+  return mission
+    .split('\n')
+    .map(line => line.replace(/^\d+\.\s*/, '').trim())
+    .filter(line => line.length > 0);
 }
 
 // ============================================
@@ -201,7 +311,42 @@ function renderCandidates(candidates) {
 // ============================================
 function showVisiMisi(candidate) {
   elements.visiCandidateName.textContent = `${candidate.chairman_name} & ${candidate.vice_chairman_name}`;
-  elements.visiContent.textContent = candidate.vision_mission || 'Visi & Misi belum tersedia.';
+  elements.visiContent.innerHTML = '';
+
+  if (candidate.vision) {
+    const visiSection = document.createElement('div');
+    visiSection.innerHTML = `
+      <div style="margin-bottom: 1.25rem;">
+        <div style="font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 0.5rem;">🎯 Visi</div>
+        <div style="font-size: 0.9375rem; line-height: 1.7; color: var(--text-secondary);">${candidate.vision}</div>
+      </div>
+    `;
+    elements.visiContent.appendChild(visiSection);
+  }
+
+  if (candidate.mission) {
+    const missionItems = parseMissionList(candidate.mission);
+    const misiSection = document.createElement('div');
+    misiSection.innerHTML = `
+      <div>
+        <div style="font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-bottom: 0.5rem;">📋 Misi</div>
+        <ul style="list-style: none; padding: 0;">
+          ${missionItems.map(item => `
+            <li style="display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.375rem 0; font-size: 0.875rem; color: var(--text-secondary); border-bottom: 1px solid var(--border);">
+              <span style="color: var(--success); font-weight: 700; flex-shrink: 0;">✓</span>
+              <span>${item}</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+    elements.visiContent.appendChild(misiSection);
+  }
+
+  if (!candidate.vision && !candidate.mission) {
+    elements.visiContent.textContent = 'Visi & Misi belum tersedia.';
+  }
+
   openModal('visiModal');
 }
 
@@ -214,9 +359,9 @@ function openConfirmModal(candidate) {
   elements.confirmCandidate.innerHTML = `
     <img
       class="confirm-photo"
-      src="${candidate.photo_url || 'https://via.placeholder.com/72x72/E5E7EB/9CA3AF?text=P${candidate.candidate_number}'}"
+      src="${candidate.photo_url || 'https://via.placeholder.com/72x72/E2E8F0/94A3B8?text=P' + candidate.candidate_number}"
       alt="Foto ${candidate.chairman_name}"
-      onerror="this.src='https://via.placeholder.com/72x72/E5E7EB/9CA3AF?text=P${candidate.candidate_number}'"
+      onerror="this.src='https://via.placeholder.com/72x72/E2E8F0/94A3B8?text=P${candidate.candidate_number}'"
     >
     <div class="confirm-info">
       <h4>Paslon ${candidate.candidate_number}</h4>
@@ -348,11 +493,10 @@ function showToast(type, title, message) {
 // Confetti Effect
 // ============================================
 function fireConfetti() {
-  // Confetti burst dari tengah
   const duration = 2000;
   const end = Date.now() + duration;
 
-  const colors = ['#1E3A5F', '#D97706', '#059669', '#DC2626', '#7C3AED'];
+  const colors = ['#2563EB', '#7C3AED', '#059669', '#DC2626', '#D97706'];
 
   (function frame() {
     confetti({
@@ -373,7 +517,7 @@ function fireConfetti() {
     if (Date.now() < end) {
       requestAnimationFrame(frame);
     }
-  }());
+  })();
 
   // Big center burst
   setTimeout(() => {
@@ -390,7 +534,6 @@ function fireConfetti() {
 // Input Formatting
 // ============================================
 elements.tokenInput.addEventListener('input', (e) => {
-  // Auto uppercase untuk NISN/ID
   e.target.value = e.target.value.toUpperCase();
 });
 
